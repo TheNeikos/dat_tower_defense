@@ -1,18 +1,26 @@
 class Tower extends iio.Shape
-    constructor: (grid, io, x, y, width, range)->
+    constructor: (grid, io, x, y, width, range, rv=false)->
+        this.rangevisible = rv
         this.grid = grid
         this.width = width
         this.range = range
         cellPos = this.grid.getCellCenter(x,y)
         this.img = new iio.Rect(cellPos.x + (this.width-1)*10, cellPos.y + (this.width-1)*10, this.width*20).setStrokeStyle("black")
         this.styles = this.img.styles
+        
         this.rangeIndicator = new iio.Circle(cellPos.x + (this.width-1)*10, cellPos.y + (this.width-1)*10, this.range * 20)
                                     .setStrokeStyle("rgba(0,0,0,0.2)")
                                     .setLineWidth(3)
                                     .setFillStyle("rgba(200,200,200,0.1)")
+        if !this.rangevisible
+            this.rangeIndicator.setAlpha(0)
         io.addObj(this.rangeIndicator)
         this.setPos(x, y)
 
+    toggleRangeIndicator: ->
+        this.rangevisible != this.rangevisible
+        this.rangeIndicator.setAlpha(this.rangevisible ? 1 : 0)
+        
     setPos: (x,y)->
         super
         this.unmarkBuilding()
@@ -142,7 +150,7 @@ class Game
         io.addToGroup("checkpoints",new iio.MultiLine(points).setStrokeStyle("red").setLineWidth(1), "checkpoints")
 
     setupMouse: (io)->
-        this.tempTurret = new TempTower(this.grid,io,10,10,2,0)
+        this.tempTurret = new TempTower(this.grid,io,10,10,2,4,true)
         this.tempTurret.img.setFillStyle("green").setAlpha(0.6)
         io.addToGroup("overlays", this.tempTurret)
 
@@ -173,6 +181,7 @@ class Game
                 tower = new NormalTower(this.grid, io, this.tempTurret.pos.x, this.tempTurret.pos.y, 2, 4)
                 io.addToGroup("towers", tower)
                 this.towers.push tower
+                this.tempTurret.buildable = false
 
     setBuildMode: (mode)->
         this.buildMode = mode
