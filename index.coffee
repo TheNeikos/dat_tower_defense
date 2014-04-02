@@ -65,6 +65,40 @@ class NormalTower extends Tower
         this.img.setFillStyle("lightblue")
 
 
+class Enemy extends iio.Rect
+    constructor: (game, speed)->
+        cPos = game.getCheckpoint(0).pos
+        super(game.grid.getCellCenter(cPos), 30)
+        this.enableKinematics()
+
+        this.setFillStyle("red")
+        this.setStrokeStyle("darkred")
+
+        this.game = game
+        this.cur_checkpoint = 1
+        this.hp = 20
+        this.speed = speed
+
+        this.moveToNextCheckpoint()
+        
+        
+    update: ->
+        cPos = this.game.grid.getCellCenter(this.game.getCheckpoint(this.cur_checkpoint).pos)
+        if(this.pos.clone().sub(cPos).length() < 2)
+            this.cur_checkpoint++
+            this.moveToNextCheckpoint()
+
+
+    moveToNextCheckpoint: ->
+        nextPos = this.game.grid.getCellCenter(this.game.getCheckpoint(this.cur_checkpoint).pos)
+        rot = Math.atan2(this.pos.x - nextPos.x, -(this.pos.y - nextPos.y))
+        velX = Math.sin(rot)
+        velY = -Math.cos(rot)
+        vel = new iio.Vec(velX, velY).normalize().mult(-this.speed)
+        this.setVel(vel)
+
+
+
 class Checkpoint extends iio.Obj
     constructor: (x, y)->
         this.setPos(x, y)
@@ -80,8 +114,6 @@ class Game
         this.createGrid(io)
         this.setupGrid(io)
 
-
-
         this.buildMode = true
 
         this.setupMouse(io)
@@ -92,7 +124,18 @@ class Game
         this.baseTower = new BaseTower(this.grid, io, 46,12,7,9)
         io.addToGroup("towers",this.baseTower)
 
+        this.enemies = []
+        io.addGroup("enemies", 5)
+
+        nEnemy = new Enemy(this, 1.5)
+        this.enemies.push nEnemy
+        io.addObj(nEnemy)
+        #io.addToGroup("enemies", nEnemy)
+
         io.setFramerate(60)
+
+    getCheckpoint: (idx)->
+        this.checkpoints[idx]
 
     createGrid: (io)->
         this.grid = new iio.Grid(0,0,50,30,20)
@@ -100,6 +143,7 @@ class Game
                         .setLineWidth(1)
         io.addGroup("grid", -1)
         io.addToGroup("grid",this.grid)
+
     setupGrid: (io)->
         this.checkpoints = []
         io.addGroup("checkpoints", -21)
@@ -146,6 +190,8 @@ class Game
         this.tempTurret.img.setFillStyle("green").setAlpha(0.6)
         io.addToGroup("overlays", this.tempTurret)
 
+        io.canvas.addEventListener "contextmenu", (e)=>
+            e.preventDefault()
 
         io.canvas.addEventListener( "mousemove", (e)=>
             if(this.tempTurret.styles.alpha == 0 && this.buildMode)
@@ -169,10 +215,14 @@ class Game
                     this.tempTurret.img.setFillStyle("red")
         )
         io.canvas.addEventListener "mousedown", (e)=>
+            event.preventDefault()
+            return if(e.which == 3) 
             if(this.tempTurret.buildable)
                 tower = new NormalTower(this.grid, io, this.tempTurret.pos.x, this.tempTurret.pos.y, 2, 4)
                 io.addToGroup("towers", tower)
                 this.towers.push tower
+
+
 
     setBuildMode: (mode)->
         this.buildMode = mode
@@ -181,6 +231,7 @@ class Game
 $(->
     game = null
     iio.start((io)->
+        io.activateDebugger()
         game = new Game(io)
     , "gameCanvas")
 )
